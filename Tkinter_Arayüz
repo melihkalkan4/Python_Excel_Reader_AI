@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk
+from tkinter import scrolledtext
 import pandas as pd
 
 class Application(tk.Tk):
@@ -10,23 +11,25 @@ class Application(tk.Tk):
         
         # Excel dosyasından verileri yükle
         self.df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\Turkiye_Bolge_Brick.xlsx', sheet_name='TURKIYE DATA')
-        
-        # Ürün (Marka) için ComboBox
-        ttk.Label(self, text="Ürün Seçiniz:").pack(pady=(20, 0))
-        self.product_combo = ttk.Combobox(self, values=list(self.df['Marka'].unique()), state="readonly")
-        self.product_combo.pack()
-        self.product_combo.bind("<<ComboboxSelected>>", self.update_regions)
+        # Bölge değerlerinde NaN kontrolü
+        self.df.dropna(subset=['Bölge'], inplace=True)  # NaN değerleri olan satırları kaldır
         
         # Bölge için ComboBox
         ttk.Label(self, text="Bölge Seçiniz:").pack(pady=(20, 0))
-        self.region_combo = ttk.Combobox(self, state="readonly")
+        self.region_combo = ttk.Combobox(self, values=list(self.df['Bölge'].unique()), state="readonly")
         self.region_combo.pack()
+        self.region_combo.bind("<<ComboboxSelected>>", self.update_products)
+        
+        # Ürün (Marka) için ComboBox
+        ttk.Label(self, text="Ürün Seçiniz:").pack(pady=(20, 0))
+        self.product_combo = ttk.Combobox(self, state="readonly")
+        self.product_combo.pack()
         
         # Treeview widget
         ttk.Label(self, text="Filtrelenmiş Veri:").pack(pady=(20, 0))
-        self.tree = ttk.Treeview(self, columns=('Marka', 'Bölge', 'PP_3.AY'), show='headings')
-        self.tree.heading('Marka', text='Marka')
+        self.tree = ttk.Treeview(self, columns=('Bölge', 'Marka', 'PP_3.AY'), show='headings')
         self.tree.heading('Bölge', text='Bölge')
+        self.tree.heading('Marka', text='Marka')
         self.tree.heading('PP_3.AY', text='PP 3. Ay Pazar Payı')
         self.tree.pack(expand=True, fill=tk.BOTH, pady=10)
         
@@ -39,24 +42,116 @@ class Application(tk.Tk):
         filter_button = ttk.Button(self, text="Filtrele", command=self.filter_data)
         filter_button.pack(pady=10)
 
-    def update_regions(self, event):
-        selected_product = self.product_combo.get()
-        regions = self.df[self.df['Marka'] == selected_product]['Bölge'].unique()
-        self.region_combo['values'] = list(regions)
-        if regions.size > 0:
-            self.region_combo.current(0)
+    def update_products(self, event):
+        selected_region = self.region_combo.get()
+        products = self.df[self.df['Bölge'] == selected_region]['Marka'].unique()
+        self.product_combo['values'] = list(products)
+        if products.size > 0:
+            self.product_combo.current(0)
+        else:
+            self.product_combo.set('')  # Ürün listesi boş ise, ComboBox'ı temizle
 
     def filter_data(self):
-        selected_product = self.product_combo.get()
         selected_region = self.region_combo.get()
-        filtered_data = self.df[(self.df['Marka'] == selected_product) & (self.df['Bölge'] == selected_region)]
+        selected_product = self.product_combo.get()
+        filtered_data = self.df[(self.df['Bölge'] == selected_region) & (self.df['Marka'] == selected_product)]
+        
         # Önceki girdileri temizle
         for i in self.tree.get_children():
             self.tree.delete(i)
+
         # Filtrelenmiş verileri Treeview'a ekle
-        for _, row in filtered_data.iterrows():
-            self.tree.insert('', 'end', values=(row['Marka'], row['Bölge'], f"{row['PP_3.AY']:.2f}"))
-        self.generate_text(filtered_data)
+        if not filtered_data.empty:
+            for _, row in filtered_data.iterrows():
+                self.tree.insert('', 'end', values=(row['Bölge'], row['Marka'], f"{row['PP_3.AY']:.2f}"))
+            self.generate_text(filtered_data)
+        else:
+            self.text_area.delete(1.0, tk.END)
+            self.text_area.insert(tk.INSERT, "Filtrelenmiş veri bulunamadı.")
+            self.tree.insert('', 'end', values=("Veri Yok", "Veri Yok", "Veri Yok"))
+
+    def generate_text(self, filtered_data):
+        # Metin içeriğini oluştur ve Text widget'ına ekle
+        self.text_area.delete(1.0, tk.END)
+        if not filtered_data.empty:
+            for _, row in filtered_data.iterrows():
+                text = f"{row['Marka']} (YTD’DE) %{row['PP_3.AY']:.2f} pazar payına sahiptir.\n"
+                self.text_area.insert(tk.INSERT, text)
+        else:
+            self.text_area.insert(tk.INSERT, "Filtrelenmiş veri bulunamadı.")
+
+def main():
+    app = Application()
+    app.mainloop()
+
+if __name__ == "__main__":
+    main()
+class Application(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title('İlaç Pazarı Analizi')
+        self.geometry('1000x800')
+        
+        # Excel dosyasından verileri yükle
+        self.df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\Turkiye_Bolge_Brick.xlsx', sheet_name='TURKIYE DATA')
+        # Bölge değerlerinde NaN kontrolü
+        self.df.dropna(subset=['Bölge'], inplace=True)  # NaN değerleri olan satırları kaldır
+        
+        # Bölge için ComboBox
+        ttk.Label(self, text="Bölge Seçiniz:").pack(pady=(20, 0))
+        self.region_combo = ttk.Combobox(self, values=list(self.df['Bölge'].unique()), state="readonly")
+        self.region_combo.pack()
+        self.region_combo.bind("<<ComboboxSelected>>", self.update_products)
+        
+        # Ürün (Marka) için ComboBox
+        ttk.Label(self, text="Ürün Seçiniz:").pack(pady=(20, 0))
+        self.product_combo = ttk.Combobox(self, state="readonly")
+        self.product_combo.pack()
+        
+        # Treeview widget
+        ttk.Label(self, text="Filtrelenmiş Veri:").pack(pady=(20, 0))
+        self.tree = ttk.Treeview(self, columns=('Bölge', 'Marka', 'PP_3.AY'), show='headings')
+        self.tree.heading('Bölge', text='Bölge')
+        self.tree.heading('Marka', text='Marka')
+        self.tree.heading('PP_3.AY', text='PP 3. Ay Pazar Payı')
+        self.tree.pack(expand=True, fill=tk.BOTH, pady=10)
+        
+        # Metin gösterimi için ScrolledText widget
+        ttk.Label(self, text="Detaylı Analiz:").pack(pady=(20, 0))
+        self.text_area = scrolledtext.ScrolledText(self, wrap=tk.WORD, height=10)
+        self.text_area.pack(pady=10, fill=tk.BOTH, expand=True)
+        
+        # Filtreleme butonu
+        filter_button = ttk.Button(self, text="Filtrele", command=self.filter_data)
+        filter_button.pack(pady=10)
+
+    def update_products(self, event):
+        selected_region = self.region_combo.get()
+        products = self.df[self.df['Bölge'] == selected_region]['Marka'].unique()
+        self.product_combo['values'] = list(products)
+        if products.size > 0:
+            self.product_combo.current(0)
+        else:
+            self.product_combo.set('')  # Ürün listesi boş ise, ComboBox'ı temizle
+
+    def filter_data(self):
+        selected_region = self.region_combo.get()
+        selected_product = self.product_combo.get()
+        filtered_data = self.df[(self.df['Bölge'] == selected_region) & (self.df['Marka'] == selected_product)]
+        
+        # Önceki girdileri temizle
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+
+        # Filtrelenmiş verileri Treeview'a ekle
+        if not filtered_data.empty:
+            for _, row in filtered_data.iterrows():
+                self.tree.insert('', 'end', values=(row['Bölge'], row['Marka'], f"{row['PP_3.AY']:.2f}"))
+            self.generate_text(filtered_data)
+        else:
+            self.text_area.delete(1.0, tk.END)
+            self.text_area.insert(tk.INSERT, "Filtrelenmiş veri bulunamadı.")
+            self.tree.insert('', 'end', values=("Veri Yok", "Veri Yok", "Veri Yok"))
 
     def generate_text(self, filtered_data):
         # Metin içeriğini oluştur ve Text widget'ına ekle

@@ -10,6 +10,7 @@ def generate_text(df, filename, is_region=False):
     for name, group in grouped_df:
         doc.add_heading('Bölge' if is_region else "Türkiye", level=1)  # Bölge veya Türkiye başlığı ekleniyor
         doc.add_heading(f"Ürün Adı: {name}", level=2)  # İlaç adına göre ana başlık oluşturuluyor
+        doc.add_heading('Brick', level=3)
         df = df.sort_values(['Bölge', 'Marka'])
 
         for index, row in group.iterrows():
