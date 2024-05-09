@@ -1,6 +1,6 @@
 import pandas as pd
 from docx import Document
-
+import matplotlib.pyplot as plt
 def clean_percentage(value):
     return float(str(value).replace('%', '').replace(',', '.')) * 100
 
@@ -66,3 +66,14 @@ if __name__ == "__main__":
          'C:\\Users\\melih.kalkan\\Desktop\\Turkiye_Bolge_Brick.xlsx', 
          "C:\\Users\\melih.kalkan\\Desktop\\Turkiye.docx", 
          "C:\\Users\\melih.kalkan\\Desktop\\Bolge.docx")
+    def plot_percentage_change(df, group_column):
+        grouped_df = df.groupby(group_column)
+        for name, group in grouped_df:
+            plt.figure()
+            plt.plot(group['Bölge'], group['PP_3.AY'])
+            plt.xlabel('Bölge')
+            plt.ylabel('PP 3.ay Yüzdesel Değişim')
+            plt.title(f'{name} İçin PP 3.ay Yüzdesel Değişim Grafiği')
+            plt.show()
+
+    plot_percentage_change('Bölge','Marka')
