@@ -1,57 +1,65 @@
-import pandas as pd
 from docx import Document
-import matplotlib.pyplot as plt
+import pandas as pd
+import time
 
 def clean_percentage(value):
-
-    return float(str(value).replace('%', '').replace(',', '.')) * 100
+    try:
+        return float(str(value).replace('%', '').replace(',', '.')) * 100
+    except ValueError:
+        return 0.0  # Hatalı dönüşümde 0.0 dön
 
 def generate_text(df, filename, is_region=False):
+    start_time = time.time()
     doc = Document()
-    grouped_df = df.groupby('Marka')
-    for name, group in grouped_df:
-        doc.add_heading('Bölge' if is_region else "Türkiye", level=1)  # Bölge veya Türkiye başlığı ekleniyor
-        doc.add_heading(f"Ürün Adı: {name}", level=2)  # İlaç adına göre ana başlık oluşturuluyor
-        doc.add_heading('Brick', Level=3)
-        df = df.sort_values(['Bölge', 'Marka'])
+    df = df.sort_values(['Bölge', 'Marka'])
+    print(f"Data sorted in {time.time() - start_time:.2f} seconds.")
 
-        for index, row in group.iterrows():
+    added_regions = set()
+    added_marka = set()
+    added_bricks = set()
+
+    for index, row in df.iterrows():
+        region = str(row['Bölge']) if pd.notna(row['Bölge']) else None
+        marka = str(row['Marka']) if pd.notna(row['Marka']) else None
+        brick = str(row['Brick']) if pd.notna(row['Brick']) else None
+
+        if region and region != "Bilinmeyen Bölge" and region not in added_regions:
+            doc.add_heading(region if is_region else "Türkiye", level=1)
+            added_regions.add(region)
+            print(f"Added heading for region: {region}")
+
+        if marka and marka != "Bilinmeyen Marka" and marka not in added_marka:
+            doc.add_heading(f"Ürün Adı: {marka}", level=2)
+            added_marka.add(marka)
+            print(f"Added heading for marka: {marka}")
+
+        if brick and brick != "Bilinmeyen Brick" and brick not in added_bricks:
+            doc.add_heading(brick, level=3)
+            added_bricks.add(brick)
+            print(f"Added heading for brick: {brick}")
+
+        if region and marka and brick:
             text = f"""
-            {row['Marka']} (YTD’DE) %{clean_percentage(row['PP_3.AY']):.2f} pazar payına sahiptir. Geçtiğimiz üç aylık (Ocak-Şubat-Mart) dönemde pp değişimleri sırasıyla %{clean_percentage(row['pp_değişim_1.ay']):.2f} , %{clean_percentage(row['pp_değişim_2.ay']):.2f}  ve %{clean_percentage(row['pp_değişim_3.ay']):.2f} olarak gerçekleşmiştir. Bu süreçte {row['Marka']}'in Türkiye'deki ortalama değişim oranı %{clean_percentage(row['pp_marg_ortalama']):.2f} olarak kaydedilmiştir. Geçtiğimiz yılın mart ayındaki Pazar payı yüzdesi %{clean_percentage(row['Mart_2023']):.2f}'dır. Bu da önceki yılın aynı dönemine göre pazar payımızda %{clean_percentage(row['PP_3.AY']) - clean_percentage(row['Mart_2023']):.2f} lik bir değişimin sağlandığını göstermektedir.İncelemeye alınan son üç aylık dönemde Gelişim İndeksi sırasıyla %{clean_percentage(row['GI_1.AY']):.2f}, %{clean_percentage(row['GI_2.AY']):.2f} ve %{clean_percentage(row['GI_3.AY']):.2f} olarak tespit edilmiştir.
+            {marka} (YTD’DE) %{clean_percentage(row['PP_3.AY']):.2f} pazar payına sahiptir...
             """
-            # Mevcut trendlerin devam etmesi durumunda, 3 aylık süreçte {row['Marka']}'un net kutu hacminin {row['AylıkTahmin']} olacağı öngörülmektedir. ve ortalama olarak %{clean_percentage(row['GI_değişim_ortalama']):.2f} hesaplanmış
             doc.add_paragraph(text)
+
     doc.save(filename)
+    print(f"Document saved: {filename} in {time.time() - start_time:.2f} seconds.")
 
 def process_data(df, filename, is_region=False):
     generate_text(df, filename, is_region)
 
 def main():
-    turkiye_df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\Turkiye_Bolge_Brick.xlsx', sheet_name='TURKIYE DATA')
-    bolge_df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\Turkiye_Bolge_Brick.xlsx', sheet_name='BOLGE DATA')
+    start_time = time.time()
+    turkiye_df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\670B2000.xlsx', sheet_name='TURKIYE DATA')
+    bolge_df = pd.read_excel('C:\\Users\\melih.kalkan\\Desktop\\670B2000.xlsx', sheet_name='BOLGE DATA')
+
     process_data(turkiye_df, "C:\\Users\\melih.kalkan\\Desktop\\Turkiye.docx")
     process_data(bolge_df, "C:\\Users\\melih.kalkan\\Desktop\\Bolge.docx", is_region=True)
-
-def plot_percentage_change(group_column, marka_column):
-    grouped_df = df.groupby(group_column)
-    for name, group in grouped_df:
-        plt.figure()
-        plt.plot(group[group_column], group[marka_column])
-        plt.xlabel(group_column)
-        plt.ylabel(f'{marka_column} Yüzdesel Değişim')
-        plt.title(f'{name} İçin {marka_column} Yüzdesel Değişim Grafiği')
-        plt.show()
+    
+    print(f"Total runtime: {time.time() - start_time:.2f} seconds.")
 
 if __name__ == "__main__":
     main()
 
-grouped_df = df.groupby('Marka')
-for name, group in grouped_df:
-        plt.figure()
-        plt.plot(group['Bölge'], group['PP_3.AY'])
-        plt.xlabel('Bölge')
-        plt.ylabel('PP 3.ay Yüzdesel Değişim')
-        plt.title(f'{name} İçin PP 3.ay Yüzdesel Değişim Grafiği')
-        plt.show()
-
-plot_percentage_change('Bölge', 'Marka')
