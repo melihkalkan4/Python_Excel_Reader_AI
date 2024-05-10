@@ -20,15 +20,15 @@ def generate_text(df, filename, is_region=False):
         marka = str(row['Marka']) if pd.notna(row['Marka']) else None
         brick = str(row['Brick']) if pd.notna(row['Brick']) else None
 
-        if region and region != "Bilinmeyen Bölge" and region not in added_regions:
+        if region and region != None and region not in added_regions:
             doc.add_heading(region if is_region else "Türkiye", level=1)
             added_regions.add(region)
 
-        if marka and marka != "Bilinmeyen Marka" and marka not in added_marka:
+        if marka and marka != None  and marka not in added_marka:
             doc.add_heading(f"Ürün Adı: {marka}", level=2)
             added_marka.add(marka)
 
-        if brick and brick != "Bilinmeyen Brick" and brick not in added_bricks:
+        if brick and brick != None and brick not in added_bricks:
             doc.add_heading(brick, level=3)
             added_bricks.add(brick)
         
